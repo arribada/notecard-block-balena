@@ -1,0 +1,11 @@
+version: "2.1"
+services:
+  notecard:
+    build: ./notecard
+    environment:
+      - NOTECARD_TRANSPORT=i2c
+    devices:
+      - "/dev/i2c-1:/dev/i2c-1"
+    expose:
+      - "3434"
+    privileged: true

@@ -1,0 +1,13 @@
+FROM balenalib/%%BALENA_ARCH%%-alpine-golang:3.18-build as builder
+
+WORKDIR /usr/src/app
+COPY . ./
+
+RUN go install && \
+    go build -o bin/notecard
+
+FROM balenalib/%%BALENA_ARCH%%-alpine:3.18-run as runner
+
+COPY --from=builder /usr/src/app/bin/notecard ./notecard
+
+CMD ["./notecard"]
