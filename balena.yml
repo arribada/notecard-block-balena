@@ -1,6 +1,6 @@
 name: "notecard"
 type: "sw.block"
-description: "A small Golang alternative to Blues Notecard balenaBlock in Python"
+description: "A small Golang alternative to Blues Notecard balenaBlock"
 assets:
   repository:
     type: "blob.asset"
