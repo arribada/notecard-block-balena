@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -39,40 +38,19 @@ func (s *server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	req.Body.Close()
 
-	var data map[string]interface{}
-	if err := json.Unmarshal(body, &data); err != nil {
-		log.Printf("while decoding request body: %v", err)
-		http.Error(w, "error decoding request", http.StatusInternalServerError)
-		return
-	}
-
-	for key, value := range data {
-		fmt.Printf("%s: %v\n", key, value)
-	}
-
 	// Print the resulting JSON string
 	fmt.Println(string(body))
 
-	// TODO: ask Alex: is there any reason we're not directly using
-	// TransactionJSON on the request body? Which would also save us from doing
-	// the json encoding ourselves after the code.
-	note_rsp, err := s.card.Transaction(data)
+	note_rsp, err := s.card.TransactionJSON(body)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Printf("while doing a card transaction: %v", err)
 		return
 	}
 
-	note_rsp_json, err := json.Marshal(note_rsp)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		log.Printf("while encoding transaction response: %v", err)
-		return
-	}
-
 	// Set the Content-Type header to application/json
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(note_rsp_json)
+	w.Write(note_rsp)
 }
 
 func setupNotecard(protocol string) (*notecard.Context, error) {
