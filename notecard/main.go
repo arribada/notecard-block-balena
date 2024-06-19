@@ -3,22 +3,27 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"os"
 
 	"github.com/blues/note-go/notecard"
 )
 
-type Transport string
-
 const (
-	Serial Transport = "serial"
-	I2C    Transport = "i2c"
+	Serial = "serial"
+	I2C    = "i2c"
 )
 
-var card *notecard.Context
+type server struct {
+	card *notecard.Context
+}
 
-func serveNotecard(w http.ResponseWriter, req *http.Request) {
+func (s *server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	if s.card == nil {
+		log.Fatal("notecard not initialized")
+	}
 
 	if req.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -26,9 +31,18 @@ func serveNotecard(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		log.Printf("while reading request body: %v", err)
+		http.Error(w, "error reading request body", http.StatusInternalServerError)
+		return
+	}
+	req.Body.Close()
+
 	var data map[string]interface{}
-	if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
-		http.Error(w, fmt.Sprintf("Error decoding JSON: %v", err), http.StatusBadRequest)
+	if err := json.Unmarshal(body, &data); err != nil {
+		log.Printf("while decoding request body: %v", err)
+		http.Error(w, "error decoding request", http.StatusInternalServerError)
 		return
 	}
 
@@ -36,72 +50,67 @@ func serveNotecard(w http.ResponseWriter, req *http.Request) {
 		fmt.Printf("%s: %v\n", key, value)
 	}
 
-	jsonString, err := json.Marshal(data)
-	if err != nil {
-		fmt.Println("Error encoding JSON:", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		panic(err)
-	}
-
 	// Print the resulting JSON string
-	fmt.Println(string(jsonString))
+	fmt.Println(string(body))
 
-	note_rsp, err := card.Transaction(data)
+	// TODO: ask Alex: is there any reason we're not directly using
+	// TransactionJSON on the request body? Which would also save us from doing
+	// the json encoding ourselves after the code.
+	note_rsp, err := s.card.Transaction(data)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		panic(err)
+		log.Printf("while doing a card transaction: %v", err)
+		return
 	}
 
 	note_rsp_json, err := json.Marshal(note_rsp)
 	if err != nil {
 		fmt.Println("Error encoding JSON:", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		panic(err)
+		log.Printf("while encoding transaction response: %v", err)
+		return
 	}
 
 	// Set the Content-Type header to application/json
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(note_rsp_json)
-
-	w.WriteHeader(http.StatusOK)
 }
 
-func setupNotecard(protocol Transport) *notecard.Context {
-	var card *notecard.Context
-	var err error
-
+func setupNotecard(protocol string) (*notecard.Context, error) {
 	fmt.Printf("Setting up Notecard with protocol: %s\n", protocol)
 
-	if protocol == Transport("serial") {
-		card, err = notecard.OpenSerial("/dev/tty.usbmodemNOTE1", 9600)
-		if err != nil {
-			fmt.Printf("Error opening Notecard: %v\n", err)
-			panic(err)
-		}
-	} else if protocol == Transport("i2c") {
-		card, err = notecard.OpenI2C("/dev/i2c-1", 0x17)
-		if err != nil {
-			fmt.Printf("Error opening Notecard: %v\n", err)
-			panic(err)
-		}
-	} else {
-		fmt.Printf("Missing transport protocol\n")
+	if protocol != Serial && protocol != I2C {
+		return nil, fmt.Errorf("unsupported transport protocol: %v", protocol)
 	}
-	return card
+
+	if protocol == Serial {
+		card, err := notecard.OpenSerial("/dev/tty.usbmodemNOTE1", 9600)
+		if err != nil {
+			return nil, fmt.Errorf("Error opening Notecard: %v", err)
+		}
+		return card, nil
+	}
+
+	card, err := notecard.OpenI2C("/dev/i2c-1", 0x17)
+	if err != nil {
+		return nil, fmt.Errorf("Error opening Notecard: %v", err)
+	}
+	return card, nil
 }
 
 func main() {
-	var i interface{} = os.Getenv("NOTECARD_TRANSPORT")
-	transport, err := i.(Transport)
-
-	if !err {
-		fmt.Printf("Error getting transport protocol, defaulting to I2C...\n")
+	transport := os.Getenv("NOTECARD_TRANSPORT")
+	if transport == "" {
+		log.Printf("transport protocol not provided, defaulting to I2C...")
 		transport = I2C
 	}
 
-	card = setupNotecard(transport)
+	card, err := setupNotecard(transport)
+	if err != nil {
+		log.Fatalf("while setting up notecard: %v", err)
+	}
 	defer card.Close()
 
-	http.HandleFunc("/", serveNotecard)
+	http.Handle("/", &server{card: card})
 	http.ListenAndServe(":3434", nil)
 }
