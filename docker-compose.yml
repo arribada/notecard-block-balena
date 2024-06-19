@@ -9,3 +9,4 @@ services:
     expose:
       - "3434"
     privileged: true
+    restart: always
