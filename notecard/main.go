@@ -16,8 +16,11 @@ const (
 )
 
 type server struct {
-	card *notecard.Context
+	card      *notecard.Context
+	initError error
 }
+
+var transport = os.Getenv("NOTECARD_TRANSPORT")
 
 func handleError(w http.ResponseWriter, err error, msg string) {
 	err_str := fmt.Sprintf("%s: %v", msg, err)
@@ -26,8 +29,9 @@ func handleError(w http.ResponseWriter, err error, msg string) {
 }
 
 func (s *server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	if s.card == nil {
-		log.Fatal("notecard not initialized")
+	if s.card == nil || s.initError != nil {
+		handleError(w, s.initError, "while initialising notecard")
+		log.Fatal("Notecard not initialised, exiting...")
 	}
 
 	if req.Method != http.MethodPost {
@@ -48,6 +52,7 @@ func (s *server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		handleError(w, err, "while performing a card transaction")
 		return
 	}
+	log.Printf("notecard response: %s", note_rsp)
 
 	// Set the Content-Type header to application/json
 	w.Header().Set("Content-Type", "application/json")
@@ -73,15 +78,21 @@ func setupNotecard(protocol string) (*notecard.Context, error) {
 		return card, nil
 	}
 
-	card, err := notecard.OpenI2C("/dev/i2c-1", 0x17)
+	card, err := notecard.OpenI2C("", 0x17)
 	if err != nil {
 		return nil, fmt.Errorf("error opening Notecard: %v", err)
+	}
+
+	status := map[string]interface{}{
+		"req": "card.status",
+	}
+	if _, err = card.Transaction(status); err != nil {
+		return nil, fmt.Errorf("error querying Notecard status: %v", err)
 	}
 	return card, nil
 }
 
 func main() {
-	transport := os.Getenv("NOTECARD_TRANSPORT")
 	if transport == "" {
 		log.Printf("transport protocol not provided, defaulting to I2C...")
 		transport = I2C
@@ -89,10 +100,10 @@ func main() {
 
 	card, err := setupNotecard(transport)
 	if err != nil {
-		log.Fatalf("while setting up notecard: %v", err)
+		log.Printf("while setting up notecard: %v", err)
 	}
 	defer card.Close()
 
-	http.Handle("/", &server{card: card})
+	http.Handle("/", &server{card: card, initError: err})
 	http.ListenAndServe(":3434", nil)
 }
