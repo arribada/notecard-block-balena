@@ -19,6 +19,12 @@ type server struct {
 	card *notecard.Context
 }
 
+func handleError(w http.ResponseWriter, err error, msg string) {
+	err_str := fmt.Sprintf("%s: %v", msg, err)
+	http.Error(w, err_str, http.StatusInternalServerError)
+	log.Print(err_str)
+}
+
 func (s *server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if s.card == nil {
 		log.Fatal("notecard not initialized")
@@ -26,35 +32,34 @@ func (s *server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	if req.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		fmt.Fprintf(w, "Method not allowed")
+		log.Printf("%s: Method not allowed", w)
 		return
 	}
 
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
-		log.Printf("while reading request body: %v", err)
-		http.Error(w, "error reading request body", http.StatusInternalServerError)
+		handleError(w, err, "while reading request body")
 		return
 	}
 	req.Body.Close()
 
-	// Print the resulting JSON string
-	fmt.Println(string(body))
-
 	note_rsp, err := s.card.TransactionJSON(body)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		log.Printf("while doing a card transaction: %v", err)
+		handleError(w, err, "while performing a card transaction")
 		return
 	}
 
 	// Set the Content-Type header to application/json
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(note_rsp)
+	_, err = w.Write(note_rsp)
+	if err != nil {
+		log.Printf("error writing response: %v", err)
+		return
+	}
 }
 
 func setupNotecard(protocol string) (*notecard.Context, error) {
-	fmt.Printf("Setting up Notecard with protocol: %s\n", protocol)
+	log.Printf("Setting up Notecard with protocol: %s\n", protocol)
 
 	if protocol != Serial && protocol != I2C {
 		return nil, fmt.Errorf("unsupported transport protocol: %v", protocol)
