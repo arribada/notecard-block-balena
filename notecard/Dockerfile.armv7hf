@@ -3,8 +3,7 @@ FROM balenalib/armv7hf-alpine-golang:3.18-build as builder
 WORKDIR /usr/src/app
 COPY . ./
 
-RUN go install && \
-    go build -o bin/notecard
+RUN go build -o bin/notecard
 
 FROM balenalib/armv7hf-alpine:3.18-run as runner
 
