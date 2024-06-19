@@ -65,7 +65,6 @@ func (s *server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	note_rsp_json, err := json.Marshal(note_rsp)
 	if err != nil {
-		fmt.Println("Error encoding JSON:", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Printf("while encoding transaction response: %v", err)
 		return
@@ -86,14 +85,14 @@ func setupNotecard(protocol string) (*notecard.Context, error) {
 	if protocol == Serial {
 		card, err := notecard.OpenSerial("/dev/tty.usbmodemNOTE1", 9600)
 		if err != nil {
-			return nil, fmt.Errorf("Error opening Notecard: %v", err)
+			return nil, fmt.Errorf("error opening Notecard: %v", err)
 		}
 		return card, nil
 	}
 
 	card, err := notecard.OpenI2C("/dev/i2c-1", 0x17)
 	if err != nil {
-		return nil, fmt.Errorf("Error opening Notecard: %v", err)
+		return nil, fmt.Errorf("error opening Notecard: %v", err)
 	}
 	return card, nil
 }
