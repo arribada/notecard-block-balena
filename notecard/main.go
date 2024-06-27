@@ -29,7 +29,7 @@ func handleError(w http.ResponseWriter, err error, msg string) {
 }
 
 func (s *server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	if s.card == nil || s.initError != nil {
+	if s.initError != nil {
 		handleError(w, s.initError, "while initialising notecard")
 		log.Fatal("Notecard not initialised, exiting...")
 	}
@@ -101,8 +101,9 @@ func main() {
 	card, err := setupNotecard(transport)
 	if err != nil {
 		log.Printf("while setting up notecard: %v", err)
+	} else {
+		defer card.Close()
 	}
-	defer card.Close()
 
 	http.Handle("/", &server{card: card, initError: err})
 	http.ListenAndServe(":3434", nil)
