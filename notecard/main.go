@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/blues/note-go/notecard"
 )
@@ -20,7 +21,14 @@ type server struct {
 	initError error
 }
 
-var transport = os.Getenv("NOTECARD_TRANSPORT")
+func getEnv(key string, fallback any) any {
+	if value, ok := os.LookupEnv(key); ok {
+		return value
+	}
+	return fallback
+}
+
+const debug = false
 
 func handleError(w http.ResponseWriter, err error, msg string) {
 	err_str := fmt.Sprintf("%s: %v", msg, err)
@@ -47,12 +55,19 @@ func (s *server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	req.Body.Close()
 
+	if debug {
+		log.Printf("notecard request: %s", body)
+	}
+
 	note_rsp, err := s.card.TransactionJSON(body)
 	if err != nil {
 		handleError(w, err, "while performing a card transaction")
 		return
 	}
-	log.Printf("notecard response: %s", note_rsp)
+
+	if debug {
+		log.Printf("notecard response: %s", note_rsp)
+	}
 
 	// Set the Content-Type header to application/json
 	w.Header().Set("Content-Type", "application/json")
@@ -93,10 +108,16 @@ func setupNotecard(protocol string) (*notecard.Context, error) {
 }
 
 func main() {
-	if transport == "" {
-		log.Printf("transport protocol not provided, defaulting to I2C...")
-		transport = I2C
+	debug, err := strconv.ParseBool(getEnv("NOTECARD_DEBUG", false).(string))
+	if err != nil {
+		log.Printf("Error parsing NOTECARD_DEBUG: %v", err)
 	}
+
+	if debug {
+		log.Printf("Debug mode enabled")
+	}
+
+	transport := getEnv("NOTECARD_TRANSPORT", I2C).(string)
 
 	card, err := setupNotecard(transport)
 	if err != nil {
