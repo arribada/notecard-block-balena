@@ -2,13 +2,12 @@ module arribada/blues-block
 
 go 1.21
 
-require github.com/blues/note-go v1.7.1
+require github.com/blues/note-go v1.7.2
 
 require (
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
 	github.com/creack/goselect v0.1.2 // indirect
 	github.com/go-ole/go-ole v1.2.4 // indirect
-	github.com/gofrs/flock v0.7.1 // indirect
 	github.com/shirou/gopsutil/v3 v3.21.6 // indirect
 	github.com/tklauser/go-sysconf v0.3.6 // indirect
 	github.com/tklauser/numcpus v0.2.2 // indirect
