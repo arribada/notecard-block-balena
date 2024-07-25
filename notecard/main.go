@@ -21,7 +21,7 @@ type server struct {
 	initError error
 }
 
-func getEnv(key string, fallback any) any {
+func getEnv(key string, fallback string) string {
 	if value, ok := os.LookupEnv(key); ok {
 		return value
 	}
@@ -108,7 +108,7 @@ func setupNotecard(protocol string) (*notecard.Context, error) {
 }
 
 func main() {
-	debug, err := strconv.ParseBool(getEnv("NOTECARD_DEBUG", false).(string))
+	debug, err := strconv.ParseBool(getEnv("NOTECARD_DEBUG", "false"))
 	if err != nil {
 		log.Printf("Error parsing NOTECARD_DEBUG: %v", err)
 	}
@@ -117,7 +117,7 @@ func main() {
 		log.Printf("Debug mode enabled")
 	}
 
-	transport := getEnv("NOTECARD_TRANSPORT", I2C).(string)
+	transport := getEnv("NOTECARD_TRANSPORT", I2C)
 
 	card, err := setupNotecard(transport)
 	if err != nil {
