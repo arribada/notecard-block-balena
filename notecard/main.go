@@ -12,8 +12,11 @@ import (
 )
 
 const (
-	Serial = "serial"
-	I2C    = "i2c"
+	serial = "serial"
+	i2c    = "i2c"
+
+	defaultSerialDevice = "/dev/tty.usbmodemNOTE1"
+	defaultSerialBaud   = "9600"
 )
 
 type server struct {
@@ -81,12 +84,19 @@ func (s *server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 func setupNotecard(protocol string) (*notecard.Context, error) {
 	log.Printf("Setting up Notecard with protocol: %s\n", protocol)
 
-	if protocol != Serial && protocol != I2C {
+	if protocol != serial && protocol != i2c {
 		return nil, fmt.Errorf("unsupported transport protocol: %v", protocol)
 	}
 
-	if protocol == Serial {
-		card, err := notecard.OpenSerial("/dev/tty.usbmodemNOTE1", 9600)
+	if protocol == serial {
+		serialPort := getEnv("NOTECARD_SERIAL_DEVICE", defaultSerialDevice)
+
+		baud, err := strconv.Atoi(getEnv("NOTECARD_SERIAL_BAUD", defaultSerialBaud))
+		if err != nil {
+			return nil, fmt.Errorf("error parsing NOTECARD_SERIAL_BAUD: %v", err)
+		}
+
+		card, err := notecard.OpenSerial(serialPort, baud)
 		if err != nil {
 			return nil, fmt.Errorf("error opening Notecard: %v", err)
 		}
@@ -117,7 +127,7 @@ func main() {
 		log.Printf("Debug mode enabled")
 	}
 
-	transport := getEnv("NOTECARD_TRANSPORT", I2C)
+	transport := getEnv("NOTECARD_TRANSPORT", i2c)
 
 	card, err := setupNotecard(transport)
 	if err != nil {
