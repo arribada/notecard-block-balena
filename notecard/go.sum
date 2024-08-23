@@ -1,7 +1,5 @@
 github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d h1:G0m3OIz70MZUWq3EgK3CesDbo8upS2Vm9/P3FtgI+Jk=
 github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d/go.mod h1:3eOhrUMpNV+6aFIbp5/iudMxNCF27Vw2OZgy4xEx0Fg=
-github.com/blues/note-go v1.7.1 h1:Qj6FKTkn+rPsXcj0Q2j/Mqsu07PE0/mwUvmEgtmegXc=
-github.com/blues/note-go v1.7.1/go.mod h1:GfslvbmFus7z05P1YykcbMedTKTuDNTf8ryBb1Qjq/4=
 github.com/blues/note-go v1.7.2 h1:hasFsMNTnvyp5MPpnhqL46LC1tqzxQ5sGg+NOcJUV8E=
 github.com/blues/note-go v1.7.2/go.mod h1:GfslvbmFus7z05P1YykcbMedTKTuDNTf8ryBb1Qjq/4=
 github.com/creack/goselect v0.1.2 h1:2DNy14+JPjRBgPzAd1thbQp4BSIihxcBf0IXhQXDRa0=
