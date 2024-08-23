@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 
 	"github.com/blues/note-go/notecard"
 )
@@ -20,7 +21,10 @@ const (
 )
 
 type server struct {
-	card      *notecard.Context
+	// guards transaction
+	muCard sync.Mutex
+	card   *notecard.Context
+
 	initError error
 }
 
@@ -62,11 +66,14 @@ func (s *server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		log.Printf("notecard request: %s", body)
 	}
 
+	s.muCard.Lock()
 	note_rsp, err := s.card.TransactionJSON(body)
 	if err != nil {
 		handleError(w, err, "while performing a card transaction")
+		s.muCard.Unlock()
 		return
 	}
+	s.muCard.Unlock()
 
 	if debug {
 		log.Printf("notecard response: %s", note_rsp)
