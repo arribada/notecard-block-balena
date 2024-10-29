@@ -51,7 +51,7 @@ func (s *server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	if req.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		log.Printf("%s: Method not allowed", w)
+		log.Printf("Method not allowed: %s", req.Method)
 		return
 	}
 
@@ -63,7 +63,7 @@ func (s *server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	req.Body.Close()
 
 	if debug {
-		log.Printf("notecard request: %s", body)
+		log.Printf("notecard request: %q", body)
 	}
 
 	s.muCard.Lock()
@@ -76,7 +76,7 @@ func (s *server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	s.muCard.Unlock()
 
 	if debug {
-		log.Printf("notecard response: %s", note_rsp)
+		log.Printf("notecard response: %q", note_rsp)
 	}
 
 	// Set the Content-Type header to application/json
